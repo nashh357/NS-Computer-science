@@ -154,24 +154,164 @@ class QuizApp:
 
     # Student Page Functions
     def view_assignments(self):
-        self.show_subpage("View Assignments")
+        self.clear_frame()
+        assignments_frame = ttk.Frame(self.master, padding=20)
+        assignments_frame.pack()
+
+        ttk.Label(assignments_frame, text="Assignments", font=("Helvetica", 16)).pack(pady=20)
+
+        # Example assignments
+        assignments = [
+            {"name": "Math Assignment", "due_date": "2025-03-01"},
+            {"name": "Science Assignment", "due_date": "2025-03-05"}
+        ]
+
+        for assignment in assignments:
+            assignment_frame = ttk.Frame(assignments_frame)
+            assignment_frame.pack(fill="x", pady=5)
+
+            ttk.Label(assignment_frame, text=assignment["name"]).pack(side="left")
+            ttk.Label(assignment_frame, text=f"Due Date: {assignment['due_date']}").pack(side="right")
+
+            ttk.Button(assignment_frame, text="View", command=lambda a=assignment: self.view_assignment_details(a)).pack(side="right", padx=5)
+
+        ttk.Button(assignments_frame, text="Back", command=self.show_student_dashboard).pack(pady=20)
+
+    def view_assignment_details(self, assignment):
+        self.clear_frame()
+        details_frame = ttk.Frame(self.master, padding=20)
+        details_frame.pack()
+
+        ttk.Label(details_frame, text=assignment["name"], font=("Helvetica", 16)).pack(pady=20)
+        ttk.Label(details_frame, text=f"Due Date: {assignment['due_date']}").pack(pady=10)
+
+        # Example questions
+        questions = [
+            {"question": "What is 2 + 2?", "answer": ""},
+            {"question": "What is the capital of France?", "answer": ""}
+        ]
+
+        for i, q in enumerate(questions):
+            ttk.Label(details_frame, text=f"Q{i+1}: {q['question']}").pack()
+            entry = ttk.Entry(details_frame, width=50)
+            entry.pack(pady=5)
+            q["entry"] = entry
+
+        ttk.Button(details_frame, text="Submit", command=lambda: self.submit_assignment(questions)).pack(pady=10)
+        ttk.Button(details_frame, text="Back", command=self.view_assignments).pack(pady=20)
+
+    def submit_assignment(self, questions):
+        for q in questions:
+            q["answer"] = q["entry"].get()
+        messagebox.showinfo("Success", "Assignment submitted!")
+        self.view_assignments()
 
     def view_scores(self):
-        self.show_subpage("View Scores")
+        self.clear_frame()
+        scores_frame = ttk.Frame(self.master, padding=20)
+        scores_frame.pack()
+
+        ttk.Label(scores_frame, text="Scores", font=("Helvetica", 16)).pack(pady=20)
+
+        # Example scores
+        scores = [
+            {"name": "Math Assignment", "score": "85/100"},
+            {"name": "Science Assignment", "score": "90/100"}
+        ]
+
+        for score in scores:
+            score_frame = ttk.Frame(scores_frame)
+            score_frame.pack(fill="x", pady=5)
+
+            ttk.Label(score_frame, text=score["name"]).pack(side="left")
+            ttk.Label(score_frame, text=f"Score: {score['score']}").pack(side="right")
+
+        ttk.Button(scores_frame, text="Back", command=self.show_student_dashboard).pack(pady=20)
 
     def view_leaderboard(self):
-        self.show_subpage("View Leaderboard")
+        self.clear_frame()
+        leaderboard_frame = ttk.Frame(self.master, padding=20)
+        leaderboard_frame.pack()
+
+        ttk.Label(leaderboard_frame, text="Leaderboard", font=("Helvetica", 16)).pack(pady=20)
+
+        # Example leaderboard
+        leaderboard = [
+            {"name": "Alice", "score": "95/100"},
+            {"name": "Bob", "score": "90/100"},
+            {"name": "Charlie", "score": "85/100"},
+            {"name": "Dave", "score": "80/100"},
+            {"name": "Eve", "score": "75/100"}
+        ]
+
+        for i, entry in enumerate(leaderboard):
+            ttk.Label(leaderboard_frame, text=f"{i+1}. {entry['name']} - {entry['score']}").pack()
+
+        ttk.Button(leaderboard_frame, text="Back", command=self.show_student_dashboard).pack(pady=20)
 
     def explore_quizzes(self):
-        self.show_subpage("Explore Quizzes")
+        self.clear_frame()
+        quizzes_frame = ttk.Frame(self.master, padding=20)
+        quizzes_frame.pack()
+
+        ttk.Label(quizzes_frame, text="Explore Quizzes", font=("Helvetica", 16)).pack(pady=20)
+
+        # Math Quizzes
+        ttk.Label(quizzes_frame, text="Math", font=("Helvetica", 14)).pack(pady=10)
+        math_quizzes = ["Algebra Quiz", "Geometry Quiz", "Calculus Quiz"]
+        for quiz in math_quizzes:
+            ttk.Button(quizzes_frame, text=quiz, width=20).pack(pady=5)
+
+        # Science Quizzes
+        ttk.Label(quizzes_frame, text="Science", font=("Helvetica", 14)).pack(pady=10)
+        science_quizzes = ["Biology Quiz", "Chemistry Quiz", "Physics Quiz"]
+        for quiz in science_quizzes:
+            ttk.Button(quizzes_frame, text=quiz, width=20).pack(pady=5)
+
+        ttk.Button(quizzes_frame, text="Back", command=self.show_student_dashboard).pack(pady=20)
 
     # Teacher Page Functions
     def create_class(self):
-        self.show_subpage("Create New Class")
-        dashboard_frame = ttk.Frame(self.master, padding=20)
-        dashboard_frame.pack()
+        self.clear_frame()
+        create_class_frame = ttk.Frame(self.master, padding=20)
+        create_class_frame.pack()
 
-        ttk.Button(dashboard_frame, text="Class Name", command=self.printInput).grid(row=2, column=0, columnspan=3, pady=20)
+        ttk.Label(create_class_frame, text="Create New Class", font=("Helvetica", 16)).pack(pady=20)
+
+        # Class Name
+        ttk.Label(create_class_frame, text="Class Name:").pack()
+        self.class_name_entry = ttk.Entry(create_class_frame, width=50)
+        self.class_name_entry.pack(pady=5)
+
+        # Class Subject
+        ttk.Label(create_class_frame, text="Class Subject:").pack()
+        self.class_subject_entry = ttk.Entry(create_class_frame, width=50)
+        self.class_subject_entry.pack(pady=5)
+
+        # Period
+        ttk.Label(create_class_frame, text="Period:").pack()
+        self.period_entry = ttk.Entry(create_class_frame, width=50)
+        self.period_entry.pack(pady=5)
+
+        ttk.Button(create_class_frame, text="Create Class", command=self.save_class).pack(pady=10)
+        ttk.Button(create_class_frame, text="Back", command=self.show_teacher_dashboard).pack(pady=20)
+
+    def save_class(self):
+        class_name = self.class_name_entry.get()
+        class_subject = self.class_subject_entry.get()
+        period = self.period_entry.get()
+
+        if class_name and class_subject and period:
+            class_data = {
+                "name": class_name,
+                "subject": class_subject,
+                "period": period
+            }
+            db.collection("classes").add(class_data)
+            messagebox.showinfo("Success", "Class created successfully!")
+            self.show_teacher_dashboard()
+        else:
+            messagebox.showerror("Error", "Please fill in all fields!")
 
     def view_class(self, class_num):
         self.show_subpage(f"View Class {class_num}")
@@ -207,3 +347,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
