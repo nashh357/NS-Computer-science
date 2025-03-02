@@ -23,15 +23,16 @@ def signup():
         print(f"Signup data: email={email}, password={password}, name={name}")
 
         if not email or not password or not name:
-            return render_template('signup.html', error="Missing fields")
+            return render_template('signup.html', error="Missing fields", email_error="Email is required." if not email else "", password_error="Password is required." if not password else "", name_error="Name is required." if not name else "")
 
         if not is_valid_password(password):
-            return render_template('signup.html', error="Password must be at least 8 characters long, contain an uppercase letter and a number.")
+            return render_template('signup.html', error="Password must be at least 8 characters long, contain an uppercase letter and a number.", password_error="Password must be at least 8 characters long, contain an uppercase letter and a number.")
 
         try:
             # Check if the email already exists
             user = auth.get_user_by_email(email)
-            return render_template('signup.html', error="Email already exists.")
+            return render_template('signup.html', error="Email already exists.", email_error="Email already exists.")
+
         except firebase_admin.auth.UserNotFoundError:
             # Email does not exist, proceed to create user
             try:
@@ -41,7 +42,6 @@ def signup():
                 # Hash the password for your own database
                 hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
                 save_user_data(user.uid, name, email, hashed_password.decode('utf-8'), 'regular')  # Save hashed password with user type
-
 
                 return redirect('/?success=Signup successful!'), 302
 
@@ -60,30 +60,22 @@ def login():
         print(f"Login data: email={email}, password={password}")
 
         if not email or not password:
-            return render_template('login.html', error="Missing fields")
+            return render_template('login.html', error="Missing fields", email_error="Email is required." if not email else "", password_error="Password is required." if not password else "")
 
         try:
             user = auth.get_user_by_email(email)
             # Retrieve the hashed password from the database
             hashed_password = get_hashed_password_from_db(user.uid)  # This function needs to be implemented
             if not bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+                print("Invalid login credentials.")
+                return render_template('login.html', error="Invalid login credentials.", email_error="Invalid email or password.")
 
-                return render_template('login.html', error="Invalid login credentials.")
             print("User found, password verification succeeded.")
-
-
-
-            # Verify the password
-            # Simulate successful login
-            print("Password verification succeeded.")
-
-
-            return redirect('/?success=Login successful!'), 302  # Redirect with success message
-
+            return redirect('/login?success=Login successful!'), 302  # Redirect with success message
 
         except Exception as e:
             print(f"Error during login: {str(e)}")
-            return render_template('login.html', error="Invalid login credentials.")
+            return render_template('login.html', error="Invalid login credentials.", email_error="Invalid email or password.")
 
     return render_template('login.html')
 

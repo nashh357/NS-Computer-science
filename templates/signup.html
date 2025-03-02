@@ -12,6 +12,8 @@
             justify-content: center;
             height: 100vh;
             background-color: #f0f0f0;
+            opacity: 0; /* Start hidden */
+            transition: opacity 0.5s; /* Fade in transition */
         }
         form {
             display: flex;
@@ -26,33 +28,87 @@
             padding: 10px;
             font-size: 16px;
         }
+        .error {
+            color: white;
+            background-color: red;
+            padding: 10px;
+            margin: 10px 0;
+            display: none; /* Show error messages */
+            transition: opacity 0.5s;
+        }
+        .success {
+            color: green;
+            background-color: lightgreen;
+            padding: 10px;
+            margin: 10px 0;
+            display: none; /* Initially hidden */
+            transition: opacity 0.5s;
+            border: 1px solid green;
+            border-radius: 5px;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
-<body>
+<body class="fade-in">
     <h1>Signup</h1>
     <a href="/" style="position: absolute; bottom: 20px; left: 20px;">&#8592; Go back to main</a>
 
-    <form action="/signup" method="POST">
+    <form id="signupForm" action="/signup" method="POST">
         <input type="text" name="name" placeholder="Name" required>
+        <div class="error" id="nameError">{{ name_error }}</div>
+
         <input type="email" name="email" placeholder="Email" required>
+        <div class="error" id="emailError">{{ email_error }}</div>
+
         <input type="password" name="password" placeholder="Password" required>
+        <div class="error" id="passwordError">{{ password_error }}</div>
+
         <button type="submit">Signup</button>
+        <div class="success" id="successMessage" style="display: none;"></div>
     </form>
+
     <script>
-        // Function to display messages
-        function displayMessage(message) {
-            alert(message);
+        // Function to display success messages
+        function displaySuccess(message) {
+            const successElement = document.getElementById('successMessage');
+            successElement.textContent = message;
+            successElement.style.display = 'block'; // Show the success message
+            successElement.classList.add('fade-in'); // Add fade-in class
         }
 
-        // Check for error messages in the URL
+        // Check for success messages in the URL
         const urlParams = new URLSearchParams(window.location.search);
-        const errorMessage = urlParams.get('error');
         const successMessage = urlParams.get('success');
-        if (errorMessage) {
-            displayMessage(errorMessage);
-        } else if (successMessage) {
-            displayMessage(successMessage);
+        if (successMessage) {
+            displaySuccess(successMessage);
         }
+
+        // Function to display error messages
+        function displayError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            if (message) {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block'; // Show the error
+            }
+        }
+
+        // Check for error messages in the template context
+        const nameError = "{{ name_error }}";
+        const emailError = "{{ email_error }}";
+        const passwordError = "{{ password_error }}";
+
+        displayError('nameError', nameError);
+        displayError('emailError', emailError);
+        displayError('passwordError', passwordError);
+
+        // Fade in the body
+        document.body.style.opacity = 1; // Set opacity to 1 to fade in
     </script>
 </body>
 </html>
