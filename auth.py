@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template, redirect
+from db import get_hashed_password_from_db
 import firebase_admin
+
 from firebase_admin import auth
 from db import save_user_data  # Import the save_user_data function
 import bcrypt  # Import bcrypt for password hashing
@@ -62,8 +64,13 @@ def login():
 
         try:
             user = auth.get_user_by_email(email)
-            # Simulate successful login
-            print("User found, simulating successful login.")
+            # Retrieve the hashed password from the database
+            hashed_password = get_hashed_password_from_db(user.uid)  # This function needs to be implemented
+            if not bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+
+                return render_template('login.html', error="Invalid login credentials.")
+            print("User found, password verification succeeded.")
+
 
 
             # Verify the password
@@ -71,8 +78,8 @@ def login():
             print("Password verification succeeded.")
 
 
-            print("Password verification succeeded.")
             return redirect('/?success=Login successful!'), 302  # Redirect with success message
+
 
         except Exception as e:
             print(f"Error during login: {str(e)}")

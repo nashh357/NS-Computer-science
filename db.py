@@ -18,7 +18,16 @@ def submit_answers(answers):
     results_ref.add(answers)
     return {"message": "Answers submitted successfully!"}
 
+def get_hashed_password_from_db(user_id):
+    # Retrieve the hashed password for the user from Firestore
+    users_ref = db.collection('users')
+    user_doc = users_ref.document(user_id).get()
+    if user_doc.exists:
+        return user_doc.to_dict().get('password')  # Return the hashed password
+    return None  # Return None if user does not exist
+
 def save_user_data(user_id, name, email, password, user_type):
+
     # Save user data to Firestore
     users_ref = db.collection('users')
     try:
