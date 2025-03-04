@@ -14,6 +14,9 @@ app.register_blueprint(quiz_routes)
 @app.route('/')
 def home():
     return render_template('index.html')
+@app.route('/teacher_dashboard')
+def teacher_dashboard():
+    return render_template('teacher_dashboard.html')
 @app.route('/student_dashboard')
 def student_dashboard():
     return render_template('student_dashboard.html')
