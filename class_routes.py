@@ -30,7 +30,16 @@ def create_class_route():
 
     return jsonify({"class_code": class_code}), 201
 
-@class_routes.route('/classes/<class_code>/quizzes', methods=['POST'])
+@class_routes.route('/classes/<class_code>/quizzes', methods=['GET'])
+def get_quizzes_for_class(class_code):
+    quizzes_ref = db.collection('classes').document(class_code).collection('quizzes').stream()
+    quizzes = [{"id": quiz.id, **quiz.to_dict()} for quiz in quizzes_ref]
+    if not quizzes:
+        return jsonify({"message": "No quizzes found for this class."}), 404
+    
+    # Pass only the first quiz to the template
+    return render_template('quiz.html', quiz=quizzes[0]), 200  # Pass the first quiz in the list
+
 def add_quiz_route(class_code):
     quiz_data = request.json
     # Check for existing quizzes to prevent duplicates
@@ -135,3 +144,4 @@ def add_assignment_route(class_code):
     db.collection('classes').document(class_code).collection('assignments').add(assignment_data)
 
     return jsonify({"message": "Assignment added successfully!"}), 201
+

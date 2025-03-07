@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from db import get_quizzes, submit_answers, db  # Import db for Firestore operations
 
 quiz_routes = Blueprint('quiz', __name__)
@@ -26,12 +26,19 @@ def attempt_quiz_route(quiz_id):
         quiz_ref = db.collection('quizzes').document(quiz_id).get()
         if not quiz_ref.exists:
             return jsonify({"error": "Quiz not found"}), 404
-        
+            
         quiz_data = quiz_ref.to_dict()
-        return jsonify(quiz_data), 200
+        return render_template('quiz.html', quiz=quiz_data)  # Render the quiz template with quiz data
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@quiz_routes.route('/attempt_quiz/<quiz_id>', methods=['POST'])
 def submit_answers_route():
-    answers = request.json.get('answers')
+
+    if request.is_json:
+        answers = request.get_json().get('answers')
+    else:
+        answers = request.form.to_dict()  # Handle form data if not JSON
+
     return submit_answers(answers)

@@ -19,6 +19,9 @@
         </div>
 
         <div class="assignments-list mt-4">
+            <h4>Quizzes</h4>
+            <button class="btn btn-primary" onclick="location.href='/classes/{{ class_data.class_code }}/quizzes'">Take Quiz</button>
+
             <h4>Assignments</h4>
             {% if class_data.assignments %}
                 <ul class="list-group">

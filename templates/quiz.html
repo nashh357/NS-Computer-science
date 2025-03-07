@@ -3,16 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ quiz.name }}</title>
+    <title>{{ quiz.name }} - Take the Quiz</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <h1>{{ quiz.name }}</h1>
-    <form action="/submit_quiz/{{ quiz.id }}" method="POST">
+
+    <!-- Debugging: Print the quiz data to check its structure -->
+    <pre>{{ quiz | tojson }}</pre>
+
+    <form id="quizForm" action="/classes/{{ quiz.classCode }}/quizzes/{{ quiz.id }}" method="POST">
+
+        <script>
+            document.getElementById('quizForm').addEventListener('submit', function(event) {
+                event.preventDefault();  // Prevent default form submission
+                
+                const formData = new FormData(this);
+                const data = {};
+
+                // Convert FormData to a plain object
+                formData.forEach((value, key) => {
+                    data[key] = value;
+                });
+
+                // Send the form data as JSON using Fetch
+                fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'  // Set the content type to application/json
+                    },
+                    body: JSON.stringify(data)  // Convert the data object to JSON
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to submit quiz');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Handle success (e.g., redirect or show a message)
+                    alert('Quiz submitted successfully');
+                })
+                .catch(error => {
+                    console.error('Error submitting quiz:', error);
+                    alert('An error occurred while submitting the quiz.');
+                });
+            });
+        </script>
+
+        <pre>{{ quiz | tojson }}</pre>
         {% for question in quiz.questions %}
+
             <div class="question">
-                <p>{{ question.text }}</p>
-                {% if question.type == 'multiple_choice' %}
+                <p>{{ question.question }}</p>
+                {% if question.options and question.options|length > 0 %}
+                    <!-- Multiple choice question -->
                     {% for option in question.options %}
                         <label>
                             <input type="radio" name="question_{{ loop.index }}" value="{{ option }}">
@@ -20,10 +65,12 @@
                         </label><br>
                     {% endfor %}
                 {% else %}
+                    <!-- Short answer or other type of question -->
                     <textarea name="question_{{ loop.index }}" rows="4" cols="50"></textarea>
                 {% endif %}
             </div>
         {% endfor %}
+        
         <button type="submit">Submit Quiz</button>
     </form>
 </body>

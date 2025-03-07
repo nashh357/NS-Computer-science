@@ -20,7 +20,6 @@ except Exception as e:
     logging.error(f"Error initializing Firebase: {e}")
     raise
 
-
 # Import routes
 from auth import auth_routes
 from class_routes import class_routes
@@ -161,17 +160,20 @@ def teacher_dashboard():
         logging.error(f"Error fetching teacher dashboard data: {e}")
         return "An error occurred", 500
 
-@app.route('/classes/<class_code>/quizzes', methods=['POST'])
-def add_quiz(class_code):
+@app.route('/classes/<class_code>/quizzes', methods=['GET', 'POST'])
+def quizzes(class_code):
     """Add a quiz assignment to a class."""
-    if not check_if_teacher():
-        return jsonify({"error": "Unauthorized"}), 403
+    # Allow both teachers and students to access quizzes
+    user_id = session.get('user_uid')
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
 
     data = request.json
     try:
-        # Validate required fields
+        # Handle adding a quiz
         if not all(key in data for key in ['name', 'due_date']):
             return jsonify({"error": "Missing required fields"}), 400
+
             
         # Add the quiz/assignment, ensuring no duplicates
 
@@ -234,9 +236,22 @@ def add_assignment(class_code):
         logging.error(f"Error adding assignment: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/submit_quiz/<quiz_id>', methods=['POST'])
+@app.route('/classes/<class_code>/quizzes/<quiz_id>', methods=['GET'])
+def get_quiz(class_code, quiz_id):
+    """Fetch a specific quiz by ID."""
+    try:
+        quiz_ref = db.collection('classes').document(class_code).collection('quizzes').document(quiz_id).get()
+        if not quiz_ref.exists:
+            return jsonify({"error": "Quiz not found"}), 404
+        
+        quiz_data = quiz_ref.to_dict()
+        return render_template('quiz.html', quiz=quiz_data)
+    except Exception as e:
+        logging.error(f"Error fetching quiz: {e}")
+        return jsonify({"error": str(e)}), 500
+
 def submit_quiz(quiz_id):
-    """Handle quiz submission."""
+    """Handle quiz submission.""" 
     try:
         answers = request.form.to_dict()
         user_id = session.get('user_uid')
@@ -253,7 +268,7 @@ def submit_quiz(quiz_id):
 
 @app.route('/quiz_results/<quiz_id>')
 def quiz_results(quiz_id):
-    """Render quiz results for teachers."""
+    """Render quiz results for teachers.""" 
     if not check_if_teacher():
         return "Unauthorized", 403
 

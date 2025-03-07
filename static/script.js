@@ -1,4 +1,7 @@
 function enterClass(classCode) {
+    // Logic to load the quiz when the "Take Quiz" button is clicked
+    loadQuiz(classCode);
+
     if (!classCode || typeof classCode !== 'string') {
         console.error('Invalid class code:', classCode);
         alert('Please select a valid class to enter.');
@@ -16,7 +19,32 @@ function enterClass(classCode) {
     }
 }
 
-
+function loadQuiz(classCode) {
+    fetch(`/classes/${classCode}/quizzes`, {
+        method: 'GET'
+        // Removed Content-Type header for GET request
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load quizzes');
+            }
+            return response.json();
+        })
+        .then(quizzes => {
+            console.log('Fetched quizzes:', quizzes); // Debugging: Log fetched quizzes
+            // Logic to display quizzes on the page or redirect to the quiz page
+            // For example, redirect to the first quiz if available
+            if (quizzes.length > 0) {
+                window.location.href = `/classes/${classCode}/quizzes/${quizzes[0].id}`;
+            } else {
+                alert('No quizzes available for this class.');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading quizzes:', error);
+            alert('An error occurred while loading quizzes. Please try again later.');
+        });
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // Fetch and display classes for the teacher dashboard
@@ -74,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(classes => {
-    console.log('Fetched classes:', classes.classes); // Debugging: Log fetched classes
+                console.log('Fetched classes:', classes.classes); // Debugging: Log fetched classes
 
                 const classList = document.getElementById('class-list');
                 classList.innerHTML = ''; // Clear existing classes
@@ -92,7 +120,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <h3 class="card-title">${classData.name}</h3>
                                     <p class="card-text">${classData.description}</p>
                                     <button class="btn btn-primary enter-class-button" data-class-code="${classData.id}">Enter Class</button>
-
                                 </div>
                             </div>
                         `;
