@@ -69,7 +69,6 @@ def get_classes(created_by):
     classes = classes_ref.stream()
     return [{**class_doc.to_dict(), "id": class_doc.id, "code": class_doc.to_dict().get("code")} for class_doc in classes]
 
-
 def get_students():
     # Retrieves all students from Firestore
     users_ref = db.collection('users').where('user_type', '==', 'student')
@@ -83,7 +82,6 @@ def get_students():
             print(f"Student document {student.id} does not have a 'name' field.")
     return student_list
 
-
 def add_quiz_to_class(class_code, quiz_data):
     # Adds a quiz to a specific class
     quizzes_ref = db.collection('classes').document(class_code).collection('quizzes')
@@ -94,3 +92,44 @@ def generate_class_code():
     import random
     import string
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+def get_assignment_statistics(assignment_id):
+    """
+    Fetch statistics for a specific assignment.
+    This function should return data such as:
+    - List of students who completed the assignment
+    - List of students who have not completed the assignment
+    - Submission times for each student
+    - Overdue status
+    """
+    try:
+        # Logic to fetch assignment statistics from Firestore
+        assignment_doc = db.collection('assignments').document(assignment_id).get()
+        if not assignment_doc.exists:
+            return {"error": "Assignment not found"}, 404
+        
+        assignment_data = assignment_doc.to_dict()
+        
+        # Fetch submissions for this assignment
+        submissions_ref = db.collection('submissions').where('assignment_id', '==', assignment_id).stream()
+        submissions = [submission.to_dict() for submission in submissions_ref]
+        
+        # Process submissions to get statistics
+        completed_students = []
+        not_completed_students = []
+        for submission in submissions:
+            if submission['submitted']:
+                completed_students.append({
+                    "user_id": submission['user_id'],
+                    "submission_time": submission['submission_time']
+                })
+            else:
+                not_completed_students.append(submission['user_id'])
+        
+        return {
+            "assignment": assignment_data,
+            "completed_students": completed_students,
+            "not_completed_students": not_completed_students
+        }
+    except Exception as e:
+        return {"error": str(e)}, 500

@@ -3,109 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ class_data.name }}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-        }
-        .header h1 {
-            margin: 0;
-        }
-        .header-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .delete-class-button, .add-quiz-button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .delete-class-button {
-            background-color: #dc3545;
-            color: white;
-        }
-        .add-quiz-button {
-            background-color: #007bff;
-            color: white;
-        }
-        .quizzes-list {
-            margin-top: 20px;
-        }
-        .quiz-item {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-    </style>
+    <title>Classroom</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <!-- Header Section -->
-    <div class="header">
-        <h1>{{ class_data.name }}</h1>
-        <div class="header-buttons">
-            <button onclick="window.history.back()" class="back-button">Back</button>
-            {% if is_teacher %}
-                <button id="add-quiz-button" class="add-quiz-button" onclick="document.getElementById('create-quiz-form').style.display='block'">Add Classwork</button>
-                <button class="delete-class-button" onclick="deleteClass('{{ class_data.class_code }}')">Delete Class</button>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="classroom-header">
+            <h2>{{ class_data.name }}</h2>
+            {% if session.get('user_role') == 'teacher' %}
+                <button class="btn btn-danger" onclick="deleteClass('{{ class_data.class_code }}')">Delete Class</button>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addAssignmentModal" 
+                        onclick="setCurrentClass('{{ class_data.class_code }}')">Add Assignment</button>
             {% endif %}
+        </div>
+
+        <div class="assignments-list mt-4">
+            <h4>Assignments</h4>
+            {% if class_data.assignments %}
+                <ul class="list-group">
+                    {% for assignment in class_data.assignments %}
+                        <li class="list-group-item">
+                            <strong>{{ assignment.name }}</strong>
+                            <span class="text-muted">Due: {{ assignment.due_date }}</span>
+                            <button class="btn btn-info" onclick="viewStatistics('{{ assignment.id }}')">View Statistics</button>
+                            <button class="btn btn-danger" onclick="deleteAssignment('{{ assignment.id }}')">Delete Assignment</button>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">No assignments available.</p>
+            {% endif %}
+        </div>
+
+        <!-- Add Assignment Modal -->
+        <div id="addAssignmentModal" class="modal fade" tabindex="-1" aria-labelledby="addAssignmentModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Assignment</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addAssignmentForm">
+                            <div class="mb-3">
+                                <label for="assignmentName" class="form-label">Assignment Name</label>
+                                <input type="text" class="form-control" id="assignmentName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="assignmentDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="assignmentDescription"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="dueDate" class="form-label">Due Date</label>
+                                <input type="date" class="form-control" id="dueDate" required>
+                            </div>
+                            <input type="hidden" id="currentClassCode">
+                            <button type="submit" class="btn btn-primary">Add Assignment</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Quiz List -->
-    <div class="quizzes-list">
-        {% for quiz in quizzes %}
-            <div class="quiz-item">
-                <p>{{ quiz.name }}</p>
-                <p>Due: {{ quiz.due_date }}</p>
-                {% if is_teacher %}
-                    <button onclick="window.location.href='/quiz_results/{{ quiz.id }}'">View Stats</button>
-                {% else %}
-                    <button onclick="window.location.href='/quiz/{{ quiz.id }}'">Take Quiz</button>
-                {% endif %}
-            </div>
-        {% endfor %}
-    </div>
-
-    <!-- Create Quiz Form (Hidden by Default) -->
-    <div id="create-quiz-form" class="quiz-form" style="display: none;">
-        <h3>Create a New Quiz</h3>
-        <form id="quiz-form" action="/classes/{{ class_data.class_code }}/quizzes" method="POST">
-            <input type="hidden" name="class_code" value="{{ class_data.class_code }}">
-            <input type="text" id="quiz-name" name="name" placeholder="Quiz Name" required><br>
-            <textarea id="quiz-questions" name="questions" placeholder="Enter Questions" required></textarea><br>
-            <input type="date" id="quiz-due-date" name="due_date" required><br>
-            <button type="submit">Create Quiz</button>
-        </form>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        function setCurrentClass(classCode) {
+            document.getElementById('currentClassCode').value = classCode;
+        }
+
         function deleteClass(classCode) {
             if (confirm('Are you sure you want to delete this class?')) {
                 fetch(`/delete_class/${classCode}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    method: 'DELETE'
                 })
                 .then(response => {
                     if (response.ok) {
-                        alert('Class deleted successfully!');
-                        window.location.href = '/teacher_dashboard';
+                        location.reload();
                     } else {
-                        alert('Error deleting class.');
+                        alert('Error deleting class');
+                    }
+                });
+            }
+        }
+
+        document.getElementById('addAssignmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const classCode = document.getElementById('currentClassCode').value;
+            const assignmentData = {
+                name: document.getElementById('assignmentName').value,
+                description: document.getElementById('assignmentDescription').value,
+                due_date: document.getElementById('dueDate').value
+            };
+
+            fetch(`/classes/${classCode}/quizzes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ...assignmentData,
+                    type: 'assignment'  // Explicitly set assignment type
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error adding assignment');
+                }
+            });
+        });
+
+        function deleteAssignment(assignmentId) {
+            if (confirm('Are you sure you want to delete this assignment?')) {
+                fetch(`/delete_assignment/${assignmentId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Error deleting assignment');
+                    }
+                });
+            }
+        }
+
+        function viewStatistics(assignmentId) {
+            fetch(`/assignment_statistics/${assignmentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        // Display the statistics in a modal or alert
+                        console.log(data); // Replace with actual display logic
                     }
                 })
-                .catch(error => console.error('Error:', error));
-            }
+                .catch(error => {
+                    console.error('Error fetching statistics:', error);
+                });
         }
     </script>
 </body>

@@ -10,11 +10,16 @@ import bcrypt
 logging.basicConfig(level=logging.DEBUG)
 
 # Initialize Firebase
-cred = credentials.Certificate("C:\\Users\\jesus\\project\\NS-Computer-science\\quizproject-a6230-firebase-adminsdk-fbsvc-d50c78bde1.json")
-if not firebase_admin._apps:
-    firebase_admin.initialize_app(cred)
+try:
+    cred = credentials.Certificate("C:\\Users\\jesus\\project\\NS-Computer-science\\quizproject-a6230-firebase-adminsdk-fbsvc-d50c78bde1.json")
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    logging.info("Firebase initialized successfully")
+except Exception as e:
+    logging.error(f"Error initializing Firebase: {e}")
+    raise
 
-db = firestore.client()
 
 # Import routes
 from auth import auth_routes
@@ -41,7 +46,6 @@ def get_hashed_password_from_db(email):
 
 def check_if_teacher():
     """Check if the current user is a teacher."""
-    # Placeholder logic; implement actual user role checking
     return session.get('user_role') == 'teacher'
 
 def get_classes_for_user(user_id):
@@ -102,8 +106,6 @@ def delete_class(class_code):
         logging.error(f"Error deleting class: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-
 @app.route('/')
 def home():
     """Render the home page."""
@@ -116,8 +118,18 @@ def student_dashboard():
         return redirect('/login')
 
     try:
-        classes = get_classes_for_user(session['user_uid'])
-        return render_template('student_dashboard.html', classes=classes)
+        classes = list(get_classes_for_user(session['user_uid']))
+        logging.debug(f"Raw classes data: {[cls.to_dict() for cls in classes]}")
+        formatted_classes = [{
+            'name': cls.to_dict().get('name'),
+            'description': cls.to_dict().get('description'),
+            'class_code': cls.id,
+            'assignments': []
+        } for cls in classes]
+
+        logging.debug(f"Formatted classes data: {formatted_classes}")
+        return render_template('student_dashboard.html', classes=formatted_classes)
+
     except Exception as e:
         logging.error(f"Error fetching student dashboard data: {e}")
         return "An error occurred", 500
@@ -129,90 +141,98 @@ def teacher_dashboard():
         return redirect('/login')
 
     try:
-        classes = db.collection('classes').where('created_by', '==', session['user_uid']).stream()
-        return render_template('teacher_dashboard.html', classes=classes)
+        classes = list(db.collection('classes').where('created_by', '==', session['user_uid']).stream())
+        formatted_classes = []
+        for cls in classes:
+            class_data = cls.to_dict()
+            # Fetch assignments for this class
+            assignments_ref = db.collection('classes').document(cls.id).collection('assignments').stream()
+            assignments = [assignment.to_dict() for assignment in assignments_ref]
+            
+            formatted_classes.append({
+                'name': class_data.get('name'),
+                'description': class_data.get('description'),
+                'class_code': cls.id,
+                'assignments': assignments
+            })
+
+        return render_template('teacher_dashboard.html', classes=formatted_classes)
     except Exception as e:
         logging.error(f"Error fetching teacher dashboard data: {e}")
         return "An error occurred", 500
 
-@app.route('/dashboard')
-def dashboard():
-    """Redirect to the appropriate dashboard based on user role."""
-    if 'user_uid' not in session:
-        return redirect('/login')
+@app.route('/classes/<class_code>/quizzes', methods=['POST'])
+def add_quiz(class_code):
+    """Add a quiz assignment to a class."""
+    if not check_if_teacher():
+        return jsonify({"error": "Unauthorized"}), 403
 
-    user_role = session.get('user_role')
-    if user_role == 'teacher':
-        return redirect('/teacher_dashboard')
-    else:
-        return redirect('/student_dashboard')
-
-@app.route('/login', methods=['POST'])
-def login():
-    """Handle user login."""
-    email = request.form['email']
-    password = request.form['password']
-    
+    data = request.json
     try:
-        user = auth.get_user_by_email(email)
-        hashed_password = get_hashed_password_from_db(email)
-        if user and bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
-            session['user_uid'] = user.uid
-            session['user_role'] = user.role
-            return redirect(url_for('dashboard'))
-        return "Invalid credentials", 401
+        # Validate required fields
+        if not all(key in data for key in ['name', 'due_date']):
+            return jsonify({"error": "Missing required fields"}), 400
+            
+        # Add the quiz/assignment, ensuring no duplicates
+
+        # Verify database connection
+        if not db:
+            raise Exception("Database connection not established")
+            
+        # Create assignment data
+        assignment_data = {
+            'name': data.get('name'),
+            'description': data.get('description', ''),
+            'due_date': data.get('due_date'),
+            'type': data.get('type', 'assignment'),
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'status': 'active'
+        }
+        logging.debug(f"Storing assignment data: {assignment_data}")
+        
+        # Store in Firestore
+        # Check for existing quizzes to prevent duplicates
+        existing_quizzes = db.collection('classes').document(class_code).collection('quizzes').where('name', '==', assignment_data['name']).get()
+        if existing_quizzes:
+            return jsonify({"error": "Quiz with this name already exists."}), 400
+        
+        quiz_ref = db.collection('classes').document(class_code).collection('quizzes').add(assignment_data)
+
+        logging.info(f"Assignment stored successfully with ID: {quiz_ref.id}")
+
+        return jsonify({
+            "success": True,
+            "quiz_id": quiz_ref.id,
+            "message": "Assignment added successfully"
+        }), 201
     except Exception as e:
-        logging.error(f"Error during login: {e}")
-        return "An error occurred", 500
+        logging.error(f"Error adding quiz: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "message": "Failed to add assignment"
+        }), 500
 
-@app.route('/api/classes', methods=['GET'])
-def get_classes():
-    """Fetch classes for the logged-in user."""
-    user_id = session.get('user_uid')
-    if not user_id:
-        return jsonify({"error": "User not logged in"}), 401
 
+@app.route('/classes/<class_code>/assignments', methods=['POST'])
+def add_assignment(class_code):
+    """Add an assignment to a class."""
+    if not check_if_teacher():
+        return "Unauthorized", 403
+
+    data = request.json
     try:
-        # Check user role
-        user_role = session.get('user_role')
-        if user_role == 'teacher':
-            classes = db.collection('classes').where('created_by', '==', user_id).stream()  # Fetch classes created by the teacher
-        else:
-            classes = get_classes_for_user(user_id)  # Fetch classes for students
-
-        class_list = [{"name": class_item.id} for class_item in classes]
-        return jsonify({"classes": class_list})
-
+        db.collection('classes').document(class_code).collection('assignments').add({
+            'name': data.get('name'),
+            'description': data.get('description'),
+            'due_date': data.get('due_date'),
+            'created_at': firestore.SERVER_TIMESTAMP,
+            'type': data.get('type')  # 'multiple_choice' or 'open_ended'
+        })
+        return jsonify({"success": True}), 201
     except Exception as e:
-        logging.error(f"Error fetching classes: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/students', methods=['GET'])
-def get_students():
-    """Fetch students for the logged-in teacher."""
-    user_id = session.get('user_uid')
-    if not user_id:
-        return jsonify({"error": "User not logged in"}), 401
-
-    try:
-        students_ref = db.collection('users').where('role', '==', 'student').stream()
-        students = [{'name': student_doc.to_dict()['name']} for student_doc in students_ref]
-        return jsonify({"students": students})
-    except Exception as e:
-        logging.error(f"Error fetching students: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/quiz/<quiz_id>', methods=['GET'])
-def view_quiz(quiz_id):
-    """Render the quiz page."""
-    try:
-        quiz_ref = db.collection('quizzes').document(quiz_id).get()
-        if not quiz_ref.exists:
-            return "Quiz not found", 404
-        return render_template('quiz.html', quiz=quiz_ref.to_dict())
-    except Exception as e:
-        logging.error(f"Error fetching quiz: {e}")
-        return "An error occurred", 500
+        logging.error(f"Error adding assignment: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/submit_quiz/<quiz_id>', methods=['POST'])
 def submit_quiz(quiz_id):
