@@ -1,8 +1,8 @@
-from flask import Blueprint, request, render_template, redirect, jsonify
+from flask import Blueprint, request, render_template, redirect, jsonify, session
 from db import get_hashed_password_from_db, save_user_data, db
 import firebase_admin
 from firebase_admin import credentials, auth
-import bcrypt  # Import bcrypt for password hashing
+import bcrypt
 
 # Initialize Firebase app
 if not firebase_admin._apps:
@@ -12,11 +12,18 @@ if not firebase_admin._apps:
 auth_routes = Blueprint('auth', __name__)
 
 def is_valid_password(password):
-    # Example password validation: at least 8 characters, 1 uppercase, 1 number
+    """Validate password: at least 8 characters, 1 uppercase, 1 number."""
     return len(password) >= 8 and any(char.isupper() for char in password) and any(char.isdigit() for char in password)
+
+@auth_routes.route('/logout', methods=['POST'])
+def logout():
+    """Clear session and redirect to login page."""
+    session.clear()
+    return redirect('/login')
 
 @auth_routes.route('/signup', methods=['GET', 'POST'])
 def signup():
+    """Handle user signup."""
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -26,9 +33,9 @@ def signup():
         print(f"Signup data: email={email}, password={password}, name={name}")
 
         if not email or not password or not name:
-            return render_template('signup.html', error="Missing fields", 
-                                   email_error="Email is required." if not email else "", 
-                                   password_error="Password is required." if not password else "", 
+            return render_template('signup.html', error="Missing fields",
+                                   email_error="Email is required." if not email else "",
+                                   password_error="Password is required." if not password else "",
                                    name_error="Name is required." if not name else "")
 
         if not is_valid_password(password):
@@ -48,10 +55,9 @@ def signup():
 
                 # Hash the password for your own database
                 hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-                role = 'student'  # Or dynamically assign based on input
-                print(f"Attempting to save user data: UID={user.uid}, Name={name}, Email={email}, Role={role}")  # Log the data being passed
-                save_user_data(user.uid, name, email, hashed_password.decode('utf-8'), role)  # Save hashed password with user type
-
+                role = 'student'  # Default role
+                print(f"Attempting to save user data: UID={user.uid}, Name={name}, Email={email}, Role={role}")
+                save_user_data(user.uid, name, email, hashed_password.decode('utf-8'), role)
 
                 return redirect('/?success=Signup successful!')
 
@@ -62,6 +68,7 @@ def signup():
 
 @auth_routes.route('/login', methods=['GET', 'POST'])
 def login():
+    """Handle user login."""
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -70,8 +77,8 @@ def login():
         print(f"Login data: email={email}, password={password}")
 
         if not email or not password:
-            return render_template('login.html', error="Missing fields", 
-                                   email_error="Email is required." if not email else "", 
+            return render_template('login.html', error="Missing fields",
+                                   email_error="Email is required." if not email else "",
                                    password_error="Password is required." if not password else "")
 
         try:
@@ -81,7 +88,7 @@ def login():
             print(f"User found: {user.uid}")  # Debugging: user found
 
             # Retrieve the hashed password from your database
-            hashed_password = get_hashed_password_from_db(email)  # Use email as the document ID
+            hashed_password = get_hashed_password_from_db(email)
 
             if not hashed_password:
                 print("No hashed password found in the database.")
@@ -89,68 +96,61 @@ def login():
 
             # Check if the password matches using bcrypt
             if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
-                print("Password match successful.")  # Debugging statement
-                # Now retrieve user data from Firestore
-                # Try fetching by email first, then by UID as fallback
+                print("Password match successful.")
+                session['user_uid'] = user.uid  # Save the user's UID to the session
+
+
+
+                # Retrieve user data from Firestore
                 user_query = db.collection("users").where("email", "==", email).limit(1)
                 user_docs = user_query.stream()
-                
+
                 user_data = None
                 for doc in user_docs:
                     user_data = doc
                     break
-                
+
                 if not user_data:
                     # Fallback to UID-based lookup
                     user_ref = db.collection("users").document(user.uid)
-                    print(f"Fetching user data from Firestore for UID: {user.uid}")  # Log the UID being used
-                    print(f"Firestore document path: users/{user.uid}")  # Log the full document path
+                    print(f"Fetching user data from Firestore for UID: {user.uid}")
                     user_data = user_ref.get()
-                
-                print(f"User data fetched: {user_data.to_dict() if user_data and user_data.exists else 'No data found'}")  # Debugging statement
-
-                print(f"User UID: {user.uid}")  # Log the user UID for debugging
-                print(f"User email: {email}")  # Log the user email for debugging
-
 
                 if not user_data.exists:
-                    print("User data not found in Firestore.")  # Log if user data is not found
-                    return render_template('login.html', error="User data not found.")  # Ensure proper indentation
+                    print("User data not found in Firestore.")
+                    return render_template('login.html', error="User data not found.")
 
                 role = user_data.to_dict().get("role", "student")  # Default to "student" if no role found
-                print(f"Role fetched: {role}")  # Debugging statement
-                print(f"User role: {role}")  # Debugging statement
+                print(f"Role fetched: {role}")
 
-                # Redirect based on role
-                if role == "student":
-                    print("Redirecting to student dashboard.")
-                    return redirect('/student_dashboard')
-                elif role == "teacher":
-                    print("Redirecting to teacher dashboard.")
+                # Redirect to the unified dashboard
+                # Redirect to the appropriate dashboard based on user role
+                if role == 'teacher':
                     return redirect('/teacher_dashboard')
-                elif role == "admin":
-                    print("Redirecting to admin dashboard.")
-                    return redirect('/admin_dashboard')
                 else:
-                    return redirect('/?error=Unknown role')
+                    return redirect('/student_dashboard')
+
+
             else:
                 print("Invalid login credentials: Password mismatch.")
                 return render_template('login.html', error="Invalid login credentials.", email_error="Invalid email or password.")
 
-        except firebase_admin.auth.UserNotFoundError:
+        except auth.UserNotFoundError:
             print("Invalid email or password: User not found.")
             return render_template('login.html', error="Invalid login credentials.", email_error="Invalid email or password.")
         except Exception as e:
-            print(f"Error during login: {str(e)}")  # More detailed error logging
+            print(f"Error during login: {str(e)}")
             return render_template('login.html', error="Invalid login credentials.", email_error="Invalid email or password.")
 
     return render_template('login.html')
 
 @auth_routes.route('/profile', methods=['GET'])
 def get_profile():
-    """Returns the user's profile information"""
+    """Returns the user's profile information."""
     user = auth.get_user(request.args.get('uid'))
-    return jsonify({
+    return jsonify({ 
+
+
         'name': user.display_name,
         'email': user.email,
         'created_at': user.user_metadata.creation_timestamp
@@ -158,13 +158,15 @@ def get_profile():
 
 @auth_routes.route('/forgot_password', methods=['POST'])
 def forgot_password():
-
+    """Handle password reset request."""
     email = request.json.get('email')
     if not email:
         return jsonify({"error": "Missing email"}), 400
 
     try:
         auth.generate_password_reset_link(email)
-        return jsonify({"message": "Password reset link sent"}), 200
+        return jsonify({"message": "Password reset link sent"}), 200 
+
+
     except Exception as e:
         return jsonify({"error": str(e)}), 400

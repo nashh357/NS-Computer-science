@@ -1,9 +1,11 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-d50c78bde1.json")
+# Check if the app is already initialized
+if not firebase_admin._apps:
+    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-d50c78bde1.json")
+    firebase_admin.initialize_app(cred)
 
-firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 def get_quizzes():
@@ -61,11 +63,26 @@ def create_class(name, created_by):
     })
     return class_code
 
-def get_classes():
-    # Retrieves all classes from Firestore
-    classes_ref = db.collection('classes')
+def get_classes(created_by):
+    # Retrieves classes from Firestore based on the creator
+    classes_ref = db.collection('classes').where('createdBy', '==', created_by)
     classes = classes_ref.stream()
-    return {class_doc.id: class_doc.to_dict() for class_doc in classes}
+    return [{**class_doc.to_dict(), "id": class_doc.id, "code": class_doc.to_dict().get("code")} for class_doc in classes]
+
+
+def get_students():
+    # Retrieves all students from Firestore
+    users_ref = db.collection('users').where('user_type', '==', 'student')
+    students = users_ref.stream()
+    student_list = []
+    for student in students:
+        student_data = student.to_dict()
+        if 'name' in student_data:  # Check if 'name' field exists
+            student_list.append({**student_data, "id": student.id})
+        else:
+            print(f"Student document {student.id} does not have a 'name' field.")
+    return student_list
+
 
 def add_quiz_to_class(class_code, quiz_data):
     # Adds a quiz to a specific class

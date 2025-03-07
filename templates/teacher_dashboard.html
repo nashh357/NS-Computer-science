@@ -3,10 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard</title>
+    <title>Teacher Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-    <h1>Welcome to the Teacher Dashboard</h1>
-    <p>You are logged in as a Teacher.</p>
+<body class="bg-light">
+    <div class="container py-5">
+        <header class="text-center mb-5">
+            <h1 class="display-4">Welcome to the Teacher Dashboard</h1>
+            <p class="lead">You are logged in as a teacher.</p>
+        </header>
+
+        <section class="mb-5">
+            <h2 class="mb-4">Your Classes</h2>
+            <button id="create-class-button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#createClassModal">Create Class</button>
+            <div id="class-list" class="row">
+                <!-- Classes will be populated here -->
+            </div>
+        </section>
+
+        <!-- Create Class Modal -->
+        <div id="createClassModal" class="modal fade" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create Class</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="create-class-form">
+                            <div class="mb-3">
+                                <label for="class-name" class="form-label">Class Name</label>
+                                <input type="text" id="class-name" class="form-control" placeholder="Enter class name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="class-description" class="form-label">Description</label>
+                                <textarea id="class-description" class="form-control" placeholder="Enter class description"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="mb-5">
+            <h2 class="mb-4">Your Students</h2>
+            <div id="student-list" class="row">
+                <!-- Students will be populated here -->
+            </div>
+        </section>
+
+        <form action="/logout" method="POST" class="text-center">
+            <button type="submit" id="logout-button" class="btn btn-danger">Logout</button>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function loadClasses() {
+            fetch('/api/classes')
+                .then(response => response.json())
+                .then(classes => {
+                    const classList = document.getElementById('class-list');
+                    classList.innerHTML = '';
+                    if (classes.length === 0) {
+                        classList.innerHTML = '<p>No classes found.</p>';
+                    } else {
+                        classes.forEach(classData => {
+                            const classElement = document.createElement('div');
+                            classElement.className = 'col-md-6 mb-4';
+                            classElement.innerHTML = `
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <h3 class="card-title">${classData.name}</h3>
+                                        <p class="card-text">${classData.description}</p>
+                                        <button class="btn btn-primary" onclick="enterClass('${classData.class_code}')">Enter Class</button>
+                                    </div>
+                                </div>
+                            `;
+                            classList.appendChild(classElement);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading classes:', error);
+                    document.getElementById('class-list').innerHTML = '<p>Failed to load classes. Please try again later.</p>';
+                });
+        }
+
+        function loadStudents() {
+            fetch('/api/students')
+                .then(response => response.json())
+                .then(students => {
+                    const studentList = document.getElementById('student-list');
+                    studentList.innerHTML = '';
+                    if (students.length === 0) {
+                        studentList.innerHTML = '<p>No students found.</p>';
+                    } else {
+                        students.forEach(student => {
+                            const studentElement = document.createElement('div');
+                            studentElement.className = 'col-md-6 mb-4';
+                            studentElement.innerHTML = `
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <h3 class="card-title">${student.name}</h3>
+                                        <p class="card-text">${student.email}</p>
+                                    </div>
+                                </div>
+                            `;
+                            studentList.appendChild(studentElement);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading students:', error));
+        }
+
+        document.getElementById('create-class-form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const className = document.getElementById('class-name').value;
+            const classDescription = document.getElementById('class-description').value;
+
+            fetch('/create_class', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: className, description: classDescription })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('createClassModal').querySelector('.btn-close').click();
+                    loadClasses();
+                } else {
+                    alert('Error creating class.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        function enterClass(classCode) {
+            window.location.href = `/classroom/${classCode}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadClasses();
+            loadStudents();
+        });
+    </script>
 </body>
 </html>

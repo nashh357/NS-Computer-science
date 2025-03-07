@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Results</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Quiz Results</h1>
+    <p>Total Submissions: {{ total_submissions }}</p>
+    
+    <h2>Submissions</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Answers</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for submission in submissions %}
+                <tr>
+                    <td>{{ submission.user_id }}</td>
+                    <td>
+                        <ul>
+                            {% for question, answer in submission.answers.items() %}
+                                <li><strong>Question {{ loop.index }}:</strong> {{ answer }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

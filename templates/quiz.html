@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ quiz.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>{{ quiz.name }}</h1>
+    <form action="/submit_quiz/{{ quiz.id }}" method="POST">
+        {% for question in quiz.questions %}
+            <div class="question">
+                <p>{{ question.text }}</p>
+                {% if question.type == 'multiple_choice' %}
+                    {% for option in question.options %}
+                        <label>
+                            <input type="radio" name="question_{{ loop.index }}" value="{{ option }}">
+                            {{ option }}
+                        </label><br>
+                    {% endfor %}
+                {% else %}
+                    <textarea name="question_{{ loop.index }}" rows="4" cols="50"></textarea>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit">Submit Quiz</button>
+    </form>
+</body>
+</html>
