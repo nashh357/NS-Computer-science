@@ -144,4 +144,3 @@ def add_assignment_route(class_code):
     db.collection('classes').document(class_code).collection('assignments').add(assignment_data)
 
     return jsonify({"message": "Assignment added successfully!"}), 201
-

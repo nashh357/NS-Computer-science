@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Analytics - {{ quiz.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <!-- Header Section -->
+        <header class="text-center mb-4">
+            <h1 class="display-5">Quiz Analytics</h1>
+            <h3>{{ quiz.title }}</h3>
+            <p class="text-muted">{{ class_data.name }} ({{ class_data.class_code }})</p>
+        </header>
+
+        <!-- Overview Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Completion Rate</h5>
+                        <h2 class="display-4">{{ completion_rate | round(1) }}%</h2>
+                        <p class="text-muted">{{ completed_count }} of {{ total_students }} students</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Average Score</h5>
+                        <h2 class="display-4">{{ avg_score | round(1) }}</h2>
+                        <p class="text-muted">Out of {{ quiz.questions|length }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">On-Time Submissions</h5>
+                        <h2 class="display-4">
+                            {% set on_time_count = submissions|selectattr('on_time', 'eq', true)|list|length %}
+                            {{ (on_time_count / completed_count * 100) | round(1) if completed_count > 0 else 0 }}%
+                        </h2>
+                        <p class="text-muted">{{ on_time_count }} of {{ completed_count }} submissions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Date</h5>
+                        <p class="mb-0">Created: {{ quiz.created_at if quiz.created_at else 'N/A' }}</p>
+                        <p>Due: {{ quiz.due_date if quiz.due_date else 'No due date' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs for different sections -->
+        <ul class="nav nav-tabs mb-4" id="analyticsTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="question-analysis-tab" data-bs-toggle="tab" data-bs-target="#question-analysis" type="button" role="tab" aria-controls="question-analysis" aria-selected="true">Question Analysis</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="student-submissions-tab" data-bs-toggle="tab" data-bs-target="#student-submissions" type="button" role="tab" aria-controls="student-submissions" aria-selected="false">Student Submissions</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="open-ended-grading-tab" data-bs-toggle="tab" data-bs-target="#open-ended-grading" type="button" role="tab" aria-controls="open-ended-grading" aria-selected="false">Open-Ended Grading</button>
+            </li>
+        </ul>
+
+        <!-- Tab content -->
+        <div class="tab-content" id="analyticsTabContent">
+            <!-- Question Analysis Tab -->
+            <div class="tab-pane fade show active" id="question-analysis" role="tabpanel" aria-labelledby="question-analysis-tab">
+                <div class="row">
+                    {% for q_id, stats in question_stats.items() %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Question {{ q_id|int + 1 }}</h5>
+                                <span class="badge bg-{{ 'success' if stats.correct_count / stats.total_attempted > 0.7 else 'warning' if stats.correct_count / stats.total_attempted > 0.4 else 'danger' }} ms-2">
+                                    {{ (stats.correct_count / stats.total_attempted * 100)|round(1) }}% Correct
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>{{ stats.question_text }}</strong></p>
+                                <div class="mt-3">
+                                    <canvas id="chart-q{{ q_id }}" width="400" height="300"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Student Submissions Tab -->
+            <div class="tab-pane fade" id="student-submissions" role="tabpanel" aria-labelledby="student-submissions-tab">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">Student Submissions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Score</th>
+                                        <th>Submission Time</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for submission in submissions %}
+                                    <tr>
+                                        <td>{{ submission.user_name }}</td>
+                                        <td>{{ submission.score }} / {{ quiz.questions|length }}</td>
+                                        <td>{{ submission.submission_time }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if submission.on_time else 'warning' }}">
+                                                {{ 'On Time' if submission.on_time else 'Late' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="/quiz_submission/{{ submission.id }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open-Ended Grading Tab -->
+            <div class="tab-pane fade" id="open-ended-grading" role="tabpanel" aria-labelledby="open-ended-grading-tab">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">Grade Open-Ended Responses</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if open_ended_submissions %}
+                        <div class="accordion" id="openEndedAccordion">
+                            {% for submission in open_ended_submissions %}
+                            <div class="accordion-item mb-3">
+                                <h2 class="accordion-header" id="heading{{ loop.index }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                            <span>{{ submission.user_name }} - Question {{ submission.question_idx + 1 }}</span>
+                                            <span class="badge bg-{{ 'success' if submission.is_graded else 'secondary' }} ms-2">
+                                                {{ 'Graded: ' + submission.grade|string if submission.is_graded else 'Not Graded' }}
+                                            </span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#openEndedAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-3">
+                                            <h6>Question:</h6>
+                                            <p>{{ submission.question_text }}</p>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6>Student's Answer:</h6>
+                                            <p class="border p-3 bg-light">{{ submission.answer_text }}</p>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6>Grade (out of 1):</h6>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="grade-{{ submission.submission_id }}-{{ submission.question_idx }}" min="0" max="1" step="0.1" value="{{ submission.grade }}">
+                                                <button class="btn btn-primary" onclick="gradeQuestion('{{ submission.submission_id }}', '{{ submission.question_idx }}')">
+                                                    {% if submission.is_graded %}Update Grade{% else %}Submit Grade{% endif %}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-center">No open-ended submissions found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back button -->
+        <div class="mt-4 text-center">
+            <a href="/teacher_dashboard" class="btn btn-outline-secondary me-2">Back to Teacher Dashboard</a>
+            <a href="/classroom/{{ class_data.class_code }}" class="btn btn-outline-primary">Back to Classroom</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Store question data as JSON in a hidden div to separate template logic from JavaScript -->
+    <div id="question-data" data-questions='{{% for q_id, stats in question_stats.items() %}
+        "q{{ q_id }}": {
+            "options": [{% for option, count in stats.answer_distribution.items() %}
+                "{{ option|replace("\"", "\\\"") }}"
+                {%- if not loop.last %},{% endif %}
+            {% endfor %}],
+            "counts": [{% for option, count in stats.answer_distribution.items() %}
+                {{ count }}
+                {%- if not loop.last %},{% endif %}
+            {% endfor %}]
+        }
+        {%- if not loop.last %},{% endif %}
+    {% endfor %}}'></div>
+    
+    <script>
+        // Function to generate random colors for charts
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Initialize charts for each question
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get the question data from the hidden div
+            var questionDataElement = document.getElementById('question-data');
+            var questionDataJson = questionDataElement.getAttribute('data-questions');
+            var questionData;
+            
+            try {
+                questionData = JSON.parse(questionDataJson);
+            } catch (e) {
+                console.error('Error parsing question data:', e);
+                return;
+            }
+            
+            // Process each question's data
+            for (var questionId in questionData) {
+                (function(qId) {
+                    var ctx = document.getElementById('chart-' + qId);
+                    if (!ctx) return;
+                    
+                    var qData = questionData[qId];
+                    var labels = qData.options;
+                    var data = qData.counts;
+                    var backgroundColors = [];
+                    
+                    // Generate colors
+                    for (var i = 0; i < labels.length; i++) {
+                        backgroundColors.push(getRandomColor());
+                    }
+                    
+                    // Create chart
+                    new Chart(ctx.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Responses',
+                                data: data,
+                                backgroundColor: backgroundColors,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            },
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Response Distribution'
+                                }
+                            }
+                        }
+                    });
+                })(questionId);
+            }
+        });
+
+        // Function to grade open-ended questions
+        function gradeQuestion(submissionId, questionIdx) {
+            var gradeInput = document.getElementById('grade-' + submissionId + '-' + questionIdx);
+            var grade = parseFloat(gradeInput.value);
+            // Parse questionIdx to integer since we're now passing it as a string
+            questionIdx = parseInt(questionIdx, 10);
+
+            if (isNaN(grade) || grade < 0 || grade > 1) {
+                alert('Please enter a valid grade between 0 and 1');
+                return;
+            }
+
+            fetch('/grade_open_ended', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    submission_id: submissionId,
+                    question_idx: questionIdx,
+                    grade: grade
+                })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    alert('Grade submitted successfully!');
+                    // Update the badge to show graded status
+                    var button = gradeInput.closest('.accordion-item').querySelector('.accordion-button');
+                    var badge = button.querySelector('.badge');
+                    badge.textContent = 'Graded: ' + grade;
+                    badge.classList.remove('bg-secondary');
+                    badge.classList.add('bg-success');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(function(error) {
+                console.error('Error grading question:', error);
+                alert('An error occurred while submitting the grade');
+            });
+        }
+    </script>
+</body>
+</html>

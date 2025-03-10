@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Statistics - {{ quiz.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Quiz Statistics: {{ quiz.name }}</h1>
+            <div>
+                <a href="/classroom/{{ class_code }}" class="btn btn-primary me-2">Back to Classroom</a>
+                <a href="/teacher_dashboard" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Class Info -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Class: {{ class_name }}</h5>
+                <p class="card-text">{{ quiz.description }}</p>
+                <p class="card-text"><small class="text-muted">Due Date: {{ quiz.due_date }}</small></p>
+            </div>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Total Submissions</h5>
+                        <h2 class="display-4">{{ total_submissions }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Average Score</h5>
+                        <h2 class="display-4">{{ "%.1f"|format(avg_score) }}%</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Completion Rate</h5>
+                        <h2 class="display-4">
+                            {% if total_submissions > 0 and quiz.total_students is defined and quiz.total_students > 0 %}
+                                {{ "%.1f"|format((total_submissions / quiz.total_students) * 100) }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Pass Rate</h5>
+                        <h2 class="display-4">
+                            {% if total_submissions > 0 %}
+                                {{ "%.1f"|format((passing_count / total_submissions) * 100) }}%
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Score Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="scoreDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Completion Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="completionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Submissions -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Student Submissions</h3>
+            </div>
+            <div class="card-body">
+                {% if submissions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Email</th>
+                                    <th>Submission Time</th>
+                                    <th>Score</th>
+                                    <th>Correct/Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sub in submissions %}
+                                    <tr>
+                                        <td>{{ sub.student_name }}</td>
+                                        <td>{{ sub.student_email }}</td>
+                                        <td>{{ sub.formatted_time }}</td>
+                                        <td>
+                                            {% if sub.score is not none %}
+                                                <span class="badge {{ 'bg-success' if sub.score >= 70 else 'bg-danger' }}">{{ "%.1f"|format(sub.score) }}%</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Not Graded</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ sub.correct_count or 0 }}/{{ sub.total_questions or quiz.questions|length }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" onclick="viewSubmission('{{ sub.id }}')">View Answers</button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        No submissions have been received for this quiz yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- View Submission Modal -->
+        <div class="modal fade" id="submissionModal" tabindex="-1" aria-labelledby="submissionModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="submissionModalLabel">Student Submission</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="submissionContent">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Data from Jinja templates -->
+    <script type="application/json" id="chartDataJson">
+        {
+            "scoreDistribution": {{ score_distribution|tojson|safe }},
+            "totalSubmissions": {{ total_submissions }},
+            "totalStudents": {{ quiz.total_students|default(0) }},
+            "passRate": {{ pass_rate|float|round(1) }}
+        }
+    </script>
+    
+    <script type="text/javascript">
+        // Parse data from the JSON script tag
+        const chartDataElement = document.getElementById('chartDataJson');
+        const chartData = JSON.parse(chartDataElement.textContent);
+        const notSubmitted = chartData.totalStudents - chartData.totalSubmissions;
+        
+        function viewSubmission(submissionId) {
+            const modal = new bootstrap.Modal(document.getElementById('submissionModal'));
+            const submissionContent = document.getElementById('submissionContent');
+            
+            // Show loading spinner
+            submissionContent.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            // Open the modal
+            modal.show();
+            
+            // Fetch the submission details
+            fetch(`/quiz_submission/${submissionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        submissionContent.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                        return;
+                    }
+                    
+                    // Build the HTML for the answers
+                    let answersHtml = '<h5>Student Answers:</h5><ul class="list-group">';
+                    for (const [questionIdx, answer] of Object.entries(data.answers)) {
+                        answersHtml += `
+                            <li class="list-group-item">
+                                <strong>Question ${parseInt(questionIdx) + 1}:</strong> ${answer}
+                                ${data.correctness && data.correctness[questionIdx] ? 
+                                    `<span class="badge ${data.correctness[questionIdx] === 'correct' ? 'bg-success' : 'bg-danger'} float-end">
+                                        ${data.correctness[questionIdx]}
+                                    </span>` : ''
+                                }
+                            </li>
+                        `;
+                    }
+                    answersHtml += '</ul>';
+                    
+                    // Add student info and score
+                    let html = `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Student: ${data.user_name || 'Unknown'}</h5>
+                                <p class="card-text">Email: ${data.user_email || 'N/A'}</p>
+                                <p class="card-text">Submitted: ${new Date(data.timestamp?._seconds * 1000).toLocaleString()}</p>
+                                <p class="card-text">Score: ${data.score !== null ? `${data.score}%` : 'Not Graded'}</p>
+                            </div>
+                        </div>
+                        ${answersHtml}
+                    `;
+                    
+                    submissionContent.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error fetching submission:', error);
+                    submissionContent.innerHTML = `<div class="alert alert-danger">Error loading submission data</div>`;
+                });
+        }
+
+        // Initialize charts when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Score Distribution Chart
+            const scoreCtx = document.getElementById('scoreDistributionChart').getContext('2d');
+            const scoreChart = new Chart(scoreCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
+                    datasets: [{
+                        label: 'Number of Students',
+                        data: chartData.scoreDistribution,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(255, 205, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(54, 162, 235, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(255, 99, 132)',
+                            'rgb(255, 159, 64)',
+                            'rgb(255, 205, 86)',
+                            'rgb(75, 192, 192)',
+                            'rgb(54, 162, 235)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Student Score Distribution'
+                        }
+                    }
+                }
+            });
+
+            // Completion Chart
+            const completionCtx = document.getElementById('completionChart').getContext('2d');
+            const completionChart = new Chart(completionCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Submitted', 'Not Submitted'],
+                    datasets: [{
+                        label: 'Quiz Completion',
+                        data: [chartData.totalSubmissions, notSubmitted],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(201, 203, 207, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(75, 192, 192)',
+                            'rgb(201, 203, 207)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Quiz Completion Status'
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

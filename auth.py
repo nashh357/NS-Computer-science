@@ -122,8 +122,11 @@ def login():
 
                 role = user_data.to_dict().get("role", "student")  # Default to "student" if no role found
                 print(f"Role fetched: {role}")
+                
+                # Store user role in session
+                session['user_role'] = role
+                print(f"User role {role} stored in session")
 
-                # Redirect to the unified dashboard
                 # Redirect to the appropriate dashboard based on user role
                 if role == 'teacher':
                     return redirect('/teacher_dashboard')
