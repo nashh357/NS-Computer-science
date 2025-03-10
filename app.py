@@ -490,6 +490,7 @@ def teacher_quiz_results(quiz_id):
         total_score = 0
         passing_count = 0
         score_distribution = [0, 0, 0, 0, 0]  # Buckets: 0-20%, 21-40%, 41-60%, 61-80%, 81-100%
+        total_submissions = 0
         
         for submission_ref in submissions_refs:
             submission = submission_ref.to_dict()
@@ -537,9 +538,9 @@ def teacher_quiz_results(quiz_id):
                 score_distribution[4] += 1
                 
             submissions.append(submission)
+            total_submissions += 1
             
         # Calculate average score and pass rate
-        total_submissions = len(submissions)
         avg_score = total_score / total_submissions if total_submissions > 0 else 0
         pass_rate = (passing_count / total_submissions * 100) if total_submissions > 0 else 0
         
@@ -733,6 +734,7 @@ def teacher_quiz_analytics(class_code, quiz_id):
         total_score = 0
         passing_count = 0
         score_distribution = [0, 0, 0, 0, 0]  # Buckets: 0-20%, 21-40%, 41-60%, 61-80%, 81-100%
+        total_submissions = 0
         
         for sub in submissions_refs:
             sub_data = sub.to_dict()
@@ -780,6 +782,7 @@ def teacher_quiz_analytics(class_code, quiz_id):
                 score_distribution[4] += 1
                 
             submissions.append(sub_data)
+            total_submissions += 1
             
         # Calculate overall stats
         if len(submissions) > 0:

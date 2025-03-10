@@ -64,7 +64,7 @@
                         <h5 class="card-title">Pass Rate</h5>
                         <h2 class="display-4">
                             {% if total_submissions > 0 %}
-                                {{ "%.1f"|format((passing_count / total_submissions) * 100) }}%
+                                {{ "%.1f"|format(pass_rate) }}%
                             {% else %}
                                 N/A
                             {% endif %}
@@ -135,6 +135,47 @@
                                             <button class="btn btn-sm btn-primary" onclick="viewSubmission('{{ sub.id }}')">View Answers</button>
                                         </td>
                                     </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        No submissions have been received for this quiz yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- All Student Answers -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">All Student Answers</h3>
+            </div>
+            <div class="card-body">
+                {% if submissions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Question</th>
+                                    <th>Answer</th>
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sub in submissions %}
+                                    {% if sub.answers %}
+                                        {% for question_idx, answer in sub.answers.items() %}
+                                            <tr>
+                                                <td>{{ question_idx }}</td>
+                                                <td>{{ answer }}</td>
+                                                <td>{{ sub.user_id }}</td>
+                                                <td>{{ sub.student_name }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>

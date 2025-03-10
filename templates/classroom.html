@@ -53,13 +53,18 @@
                                                     <a href="/classes/{{ class_data.class_code }}/quizzes/{{ quiz.id }}" class="btn btn-primary w-100">Take Quiz</a>
                                                 </div>
                                                 <div class="col-6 ps-1">
+                                                    {% if session.get('user_role') == 'teacher' %}
+                                                    <a href="/teacher/quiz_results/{{ quiz.id }}" class="btn btn-info w-100">View Results</a>
+                                                    {% else %}
                                                     <a href="/classes/{{ class_data.class_code }}/quizzes/{{ quiz.id }}/results" class="btn btn-info w-100">View Results</a>
-                                                </div>
+                                                    {% endif %}
+                                             </div>
                                              </div>
                                              <button class="btn btn-danger btn-sm" onclick="deleteQuiz('{{ class_data.class_code }}', '{{ quiz.id }}')">Delete Quiz</button>
                                              {% else %}
                                              {% if quiz.submitted %}
                                              <button class="btn btn-success" disabled>Submitted</button>
+                                             <a href="/classes/{{ class_data.class_code }}/quizzes/{{ quiz.id }}/results" class="btn btn-info mt-2">View Your Results</a>
                                              {% else %}
                                              <a href="/classes/{{ class_data.class_code }}/quizzes/{{ quiz.id }}" class="btn btn-primary">Take Quiz</a>
                                              {% endif %}
