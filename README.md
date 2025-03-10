@@ -8,6 +8,15 @@ This application is a quiz platform that allows users to sign up, log in, take q
 
 ## Installation
 
+### Required Imports
+To run this application, ensure you have the following packages installed:
+- Flask
+- firebase-admin
+- bcrypt
+- google-cloud-firestore
+
+
+
 To install the necessary dependencies, run the following command:
 
 ```bash
