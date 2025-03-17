@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Initialize Firebase
 try:
-    cred = credentials.Certificate("C:\\Users\\jesus\\project\\NS-Computer-science\\quizproject-a6230-firebase-adminsdk-fbsvc-d50c78bde1.json")
+    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-4311576f0d.json")
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     db = firestore.client()
