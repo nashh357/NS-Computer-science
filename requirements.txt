@@ -1,4 +1,4 @@
 Flask
 firebase-admin
-bcrypt
-google-cloud-firestore
+waitress
+gunicorn
