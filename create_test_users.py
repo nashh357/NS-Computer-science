@@ -3,7 +3,7 @@ from firebase_admin import auth, credentials, firestore
 import bcrypt
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-966ef715ea.json")
+cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-b56cacf336.json")
 firebase_admin.initialize_app(cred)
 
 # Initialize Firestore client
