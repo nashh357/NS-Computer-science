@@ -6,7 +6,7 @@ import bcrypt
 
 # Initialize Firebase app
 if not firebase_admin._apps:
-    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-0dce98ca5e.json")
+    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-966ef715ea.json")
     firebase_admin.initialize_app(cred)
 
 auth_routes = Blueprint('auth', __name__)
