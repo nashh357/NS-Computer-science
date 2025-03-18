@@ -2,3 +2,4 @@ Flask
 firebase-admin
 waitress
 gunicorn
+bcrypt
