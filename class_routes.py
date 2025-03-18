@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, session, render_template
-from db import create_class, get_classes, add_quiz_to_class, db, get_assignment_statistics
+from db import create_class, get_classes, db, get_assignment_statistics
 
 def get_students():
     # Logic to get students

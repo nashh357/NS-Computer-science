@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Initialize Firebase
 try:
-    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-4311576f0d.json")
+    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-0dce98ca5e.json")
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     db = firestore.client()
@@ -546,7 +546,7 @@ def teacher_quiz_results(quiz_id):
         
         # Get total students in class for completion rate calculation
         quiz_data['total_students'] = len(class_data.get('students', []))
-        
+            
         return render_template(
             'teacher_quiz_results.html',
             quiz=quiz_data,
@@ -944,4 +944,4 @@ def delete_assignment(class_code, assignment_id):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
