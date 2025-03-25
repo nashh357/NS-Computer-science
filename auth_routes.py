@@ -3,12 +3,7 @@ from db import get_hashed_password_from_db, save_user_data, db
 import firebase_admin
 from firebase_admin import credentials, auth
 import bcrypt
-
-# Initialize Firebase app
-if not firebase_admin._apps:
-    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-ae201fd420.json")
-    firebase_admin.initialize_app(cred)
-
+from firebase_config import db
 auth_routes = Blueprint('auth', __name__)
 
 def is_valid_password(password):
