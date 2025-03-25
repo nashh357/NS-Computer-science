@@ -3,3 +3,4 @@ firebase-admin
 waitress
 gunicorn
 bcrypt
+dotenv
