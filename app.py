@@ -5,6 +5,9 @@ import logging
 import random
 import string
 import bcrypt
+import os
+import firebase_admin
+from firebase_admin import credentials
 from datetime import datetime
 import warnings
 
@@ -16,7 +19,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Initialize Firebase
 try:
-    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-ae201fd420.json")
+    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-267213700c.json")
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     db = firestore.client()
