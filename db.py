@@ -1,12 +1,11 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
-
+from firebase_config import db
 # Check if the app is already initialized
 if not firebase_admin._apps:
     cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-267213700c.json")
     firebase_admin.initialize_app(cred)
 
-db = firestore.client()
 
 def get_quizzes():
     # Fetch quiz questions from Firestore
