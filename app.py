@@ -5,28 +5,19 @@ import logging
 import random
 import string
 import bcrypt
+import os
+import firebase_admin
+from firebase_admin import credentials
 from datetime import datetime
 import warnings
-
+from firebase_config import db
 # Suppress specific UserWarning about using positional arguments in Firestore queries
 warnings.filterwarnings("ignore", message="Detected filter using positional arguments.*")
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
-
-# Initialize Firebase
-try:
-    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-ae201fd420.json")
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    logging.info("Firebase initialized successfully")
-except Exception as e:
-    logging.error(f"Error initializing Firebase: {e}")
-    raise
-
 # Import routes
-from auth import auth_routes
+from auth_routes import auth_routes
 from class_routes import class_routes
 
 app = Flask(__name__)
