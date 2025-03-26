@@ -1,2 +1,3 @@
 # Ignore the following files
 quizproject-a6230-firebase-adminsdk-fbsvc-27ef455fd6.json
+.env
