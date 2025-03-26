@@ -1,9 +1,11 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 from firebase_config import db
+import os
 # Check if the app is already initialized
 if not firebase_admin._apps:
-    cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-267213700c.json")
+    cred = credentials.Certificate(os.getenv("QUIZPROJECT_SERVICE_ACCOUNT_KEY"))
+
     firebase_admin.initialize_app(cred)
 
 

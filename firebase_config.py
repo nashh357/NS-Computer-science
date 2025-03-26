@@ -17,4 +17,4 @@ if not firebase_admin._apps:
 
 # Firestore client
 db = firestore.client()
-service_account_key_path = os.path.join(os.path.dirname(__file__), "quizproject-a6230-firebase-adminsdk-fbsvc-6f3958fc54.json")
+# Removed hardcoded path to the service account key

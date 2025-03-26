@@ -1,9 +1,10 @@
 import firebase_admin
 from firebase_admin import auth, credentials, firestore
 import bcrypt
-
+import os
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate("quizproject-a6230-firebase-adminsdk-fbsvc-ae201fd420.json")
+cred = credentials.Certificate(os.getenv("QUIZPROJECT_SERVICE_ACCOUNT_KEY"))
+
 firebase_admin.initialize_app(cred)
 
 # Initialize Firestore client
