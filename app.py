@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.DEBUG)
 from auth_routes import auth_routes
 from class_routes import class_routes
 
+# Create the Flask application instance
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'  # Set a secret key for session management
 
@@ -933,8 +934,6 @@ def delete_assignment(class_code, assignment_id):
     except Exception as e:
         logging.error(f"Error deleting assignment: {e}")
         return jsonify({"error": str(e)}), 500
-
-app = app
 
 if __name__ == '__main__':
     app.run()
